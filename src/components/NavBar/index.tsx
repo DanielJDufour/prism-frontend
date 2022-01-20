@@ -16,9 +16,44 @@ import {
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faInfoCircle, faBars } from '@fortawesome/free-solid-svg-icons';
 import { faGithub } from '@fortawesome/free-brands-svg-icons';
+import * as msal from '@azure/msal-browser';
+import { useDispatch, useSelector } from 'react-redux';
+import { useMsal } from '@azure/msal-react';
 import MenuItem from './MenuItem';
 import MenuItemMobile from './MenuItemMobile';
 import { menuList } from './utils';
+import { usernameSelector, setUserData } from '../../context/authStateSlice';
+
+const loginWFP = (dispatch: any) => {
+  const {
+    REACT_APP_OAUTH_CLIENT_ID: CLIENT_ID,
+    REACT_APP_OAUTH_AUTHORITY: AUTHORITY,
+    REACT_APP_OAUTH_REDIRECT_URI: REDIRECT_URI,
+  } = process.env;
+
+  const msalConfig = {
+    auth: {
+      clientId: CLIENT_ID!,
+      authority: AUTHORITY!,
+      redirectUri: REDIRECT_URI!,
+    },
+  };
+
+  const msalInstance = new msal.PublicClientApplication(msalConfig);
+  msalInstance
+    .loginPopup({
+      scopes: ['openid', 'profile'],
+    })
+    .then(evt => {
+      if (evt === null) {
+        return;
+      }
+
+      dispatch(
+        setUserData({ name: evt.account!.username.split('@')[0] as string }),
+      );
+    });
+};
 
 const rightSideLinks = [
   {
@@ -35,6 +70,12 @@ const rightSideLinks = [
 
 function NavBar({ classes }: NavBarProps) {
   const [openMobileMenu, setOpenMobileMenu] = useState(false);
+  const username = useSelector(usernameSelector);
+
+  const test = useMsal();
+  console.log(test);
+
+  const dispatch = useDispatch();
 
   const menu = menuList.map(({ title, ...category }) => (
     <MenuItem key={title} title={title} {...category} />
@@ -97,6 +138,26 @@ function NavBar({ classes }: NavBarProps) {
               item
               xs={3}
             >
+              <Grid item key="login">
+                {username ? (
+                  <Typography variant="body2" component="h5">
+                    {username}
+                  </Typography>
+                ) : (
+                  <Typography
+                    variant="body2"
+                    component="a"
+                    href=""
+                    onClick={(evt: any) => {
+                      evt.preventDefault();
+                      loginWFP(dispatch);
+                    }}
+                  >
+                    <FontAwesomeIcon icon={faInfoCircle} /> Login
+                  </Typography>
+                )}
+              </Grid>
+
               {buttons}
             </Grid>
           </Hidden>
